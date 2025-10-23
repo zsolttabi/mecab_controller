@@ -67,11 +67,10 @@ def mecab_output_to_str(outs: bytes) -> str:
 
 
 def prepend_library_path() -> None:
-    for library_path in ("DYLD_LIBRARY_PATH", "LD_LIBRARY_PATH"):
-        try:
-            os.environ[library_path] = f"{SUPPORT_DIR}:{os.environ[library_path]}"
-        except KeyError:
-            os.environ[library_path] = SUPPORT_DIR
+    paths = [SUPPORT_DIR]
+    for var in ("DYLD_LIBRARY_PATH", "DYLD_FALLBACK_LIBRARY_PATH", "LD_LIBRARY_PATH"):
+        existing = os.environ.get(var, "")
+        os.environ[var] = ":".join(paths + ([existing] if existing else []))
 
 
 class BasicMecabController:
@@ -108,6 +107,7 @@ class BasicMecabController:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 startupinfo=startup_info(),
+                env=os.environ,  # <-- critical so DYLD_* applies
             )
         except OSError:
             raise Exception("Please ensure your Linux system has 64 bit binary support.")
